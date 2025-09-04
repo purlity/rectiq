@@ -1,0 +1,34 @@
+name: Release Rectiq CLI (manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    if: false # disabled; builds happen in private CI
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-dist
+        run: cargo install cargo-dist --locked || true
+      - name: Build artifacts (CLI only)
+        run: |
+          cargo dist build \
+            --package rectiq-cli \
+            --target aarch64-apple-darwin \
+            --target x86_64-apple-darwin \
+            --target aarch64-unknown-linux-musl \
+            --target x86_64-unknown-linux-musl \
+            --target aarch64-pc-windows-msvc \
+            --target x86_64-pc-windows-msvc
+      - name: Upload release assets
+        uses: taiki-e/upload-release-action@v1
+        with:
+          asset_pattern: 'target/dist/*'
+          tag: ${{ github.ref_name }}
