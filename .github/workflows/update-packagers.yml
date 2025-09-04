@@ -4,6 +4,7 @@ on:
     types: [published]
 jobs:
   update:
+    if: ${{ github.event.release.prerelease == false }}
     runs-on: ubuntu-latest
     steps:
       - name: Resolve version
