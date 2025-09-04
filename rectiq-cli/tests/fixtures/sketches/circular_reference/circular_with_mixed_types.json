@@ -1,8 +1,0 @@
-{
-  "data": {
-    "map": {
-      "a": { "$ref": "#/data/list/0" }
-    },
-    "list": [{ "name": "item", "back": { "$ref": "#/data/map/a" } }]
-  }
-}

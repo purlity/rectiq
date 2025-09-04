@@ -1,5 +1,0 @@
-{
-  "key": true,
-  "arr": [1, 2, "oops", null, false],
-  "object": { "name": "Ali" }
-}

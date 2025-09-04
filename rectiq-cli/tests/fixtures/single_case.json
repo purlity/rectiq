@@ -1,5 +1,0 @@
-{
-    "key": tru, // invalid boolean
-    "arr": [1,, 2 "oops" null, Falsee],
-    "object": { name: "Ali" }
-}
