@@ -26,6 +26,8 @@ jobs:
       - name: Compute SHAs
         id: shas
         run: |
+          sudo apt-get update >/dev/null 2>&1 || true
+          sudo apt-get install -y jq >/dev/null 2>&1 || true
           mkdir dist
           echo "${{ steps.assets.outputs.assets }}" > assets.json
           cat assets.json | jq -r '.assets[].url' | while read url; do
@@ -43,10 +45,10 @@ jobs:
           # Replace version
           sed -i "s/version \".*\"/version \"${V}\"/" rectiq.rb
           # Replace SHA placeholders
-          MAC_ARM=$(grep aarch64-apple-darwin ../dist/SHA256SUMS.txt | awk '{print $1}')
-          MAC_X64=$(grep x86_64-apple-darwin ../dist/SHA256SUMS.txt | awk '{print $1}')
-          LNX_ARM=$(grep aarch64-unknown-linux-musl ../dist/SHA256SUMS.txt | awk '{print $1}')
-          LNX_X64=$(grep x86_64-unknown-linux-musl ../dist/SHA256SUMS.txt | awk '{print $1}')
+          MAC_ARM=$(grep aarch64-apple-darwin ../../dist/SHA256SUMS.txt | awk '{print $1}')
+          MAC_X64=$(grep x86_64-apple-darwin ../../dist/SHA256SUMS.txt | awk '{print $1}')
+          LNX_ARM=$(grep aarch64-unknown-linux-musl ../../dist/SHA256SUMS.txt | awk '{print $1}')
+          LNX_X64=$(grep x86_64-unknown-linux-musl ../../dist/SHA256SUMS.txt | awk '{print $1}')
           sed -i "s/__SHA256_MAC_ARM64__/${MAC_ARM}/" rectiq.rb
           sed -i "s/__SHA256_MAC_X64__/${MAC_X64}/" rectiq.rb
           sed -i "s/__SHA256_LINUX_ARM64__/${LNX_ARM}/" rectiq.rb
@@ -72,4 +74,3 @@ jobs:
           git config user.email "bot@purlity.org"
           git commit -am "rectiq ${V} (auto)" || echo "No changes"
           git push
-
