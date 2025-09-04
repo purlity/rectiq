@@ -34,7 +34,11 @@ jobs:
             name=$(basename "$url")
             curl -fsSL "$url" -o "dist/$name"
           done
-          for f in dist/*; do sha256sum "$f" >> dist/SHA256SUMS.txt; done
+          # Only compute SHAs for archive files (exclude .sha256, provenance, etc.)
+          for f in dist/*.tar.xz dist/*.zip; do
+            [ -f "$f" ] || continue
+            sha256sum "$f" >> dist/SHA256SUMS.txt
+          done
           cat dist/SHA256SUMS.txt
       - name: Update Homebrew tap
         env: { GH_TOKEN: ${{ secrets.GH_PAT_PUSH }} }
