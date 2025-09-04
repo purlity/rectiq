@@ -1,12 +1,11 @@
-name: Release Rectiq CLI
+name: Release Rectiq CLI (manual)
 
 on:
-  push:
-    tags:
-      - 'rectiq-cli-v*'
+  workflow_dispatch:
 
 jobs:
   build:
+    if: false # disabled; builds happen in private CI
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -33,4 +32,3 @@ jobs:
         with:
           asset_pattern: 'target/dist/*'
           tag: ${{ github.ref_name }}
-
