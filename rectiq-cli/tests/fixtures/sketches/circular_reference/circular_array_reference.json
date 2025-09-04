@@ -1,0 +1,12 @@
+{
+  "items": [
+    {
+      "name": "first",
+      "link": { "$ref": "#/items/1" }
+    },
+    {
+      "name": "second",
+      "link": { "$ref": "#/items/0" }
+    }
+  ]
+}

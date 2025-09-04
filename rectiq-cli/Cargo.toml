@@ -1,0 +1,85 @@
+[package]
+name = "rectiq-cli"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "Proprietary"
+
+[[bin]]
+name = "rectiq"
+path = "src/main.rs"
+
+[features]
+default = ["parallel", "secure-default", "keystore-native"]
+parallel = ["rayon"]
+bench-xl = []
+secure-default = []
+insecure-dev = []
+# Native keystore backends pulled in only when this feature is enabled.
+# Native keystore backends are platform-gated below; this feature merely
+# opts-in to whichever backend is available on the current target.
+keystore-native = [
+    "dep:keyring",
+    "dep:security-framework", # only compiled on macOS (see target deps)
+    "dep:secret-service",     # only compiled on Linux (see target deps)
+    "dep:windows",            # only compiled on Windows (see target deps)
+]
+keystore-tracing = []
+
+[dependencies]
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls"] }
+tokio = { workspace = true }
+clap = { workspace = true }
+dirs = { workspace = true }
+nom = { workspace = true }
+once_cell = { workspace = true }
+hex = { workspace = true }
+sha2 = { workspace = true }
+aes-gcm = { workspace = true }
+base64 = { workspace = true }
+rayon = { workspace = true, optional = true }
+rectiq-crypto = { workspace = true }
+rectiq-types = { workspace = true }
+dpop = { path = "../crates/dpop" }
+typenum = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+walkdir = { workspace = true }
+zeroize = { workspace = true }
+getrandom = { workspace = true }
+uuid = { version = "1", features = ["v4", "fast-rng"] }
+time = { version = "0.3", features = ["formatting"] }
+hmac = "0.12"
+keyring = { version = "3", optional = true }
+thiserror = { workspace = true }
+subtle = { workspace = true }
+toml = { workspace = true }
+
+[dev-dependencies]
+rectiq-test-support = { path = "../rectiq-test-support" }
+rectiq-core = { path = "../rectiq-core" }
+proptest = { workspace = true }
+assert_cmd = { workspace = true }
+assert_fs = { workspace = true }
+insta = { workspace = true }
+criterion = { workspace = true }
+num_cpus = { workspace = true }
+axum = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = { version = "3", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Use tokio runtime for zbus/secret-service with pure Rust crypto.
+secret-service = { version = "5", optional = true, features = ["rt-tokio-crypto-rust"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+# Minimal set required for Credential Manager / DPAPI backend.
+windows = { version = "0.61", optional = true, features = [
+    "Security_Cryptography",
+    "Win32_Foundation",
+] }
