@@ -46,7 +46,8 @@ jobs:
             curl -fsSL "$url" -o "dist/$name"
           done
           # Only compute SHAs for archive files (exclude .sha256, provenance, etc.)
-          for f in dist/*.tar.xz dist/*.zip; do
+          # Support current .tar.gz and legacy .tar.xz, plus .zip for Windows
+          for f in dist/*.tar.gz dist/*.tar.xz dist/*.zip; do
             [ -f "$f" ] || continue
             sha256sum "$f" >> dist/SHA256SUMS.txt
           done
@@ -60,11 +61,11 @@ jobs:
           cd tap/Formula
           # Replace version
           sed -i "s/version \".*\"/version \"${V}\"/" rectiq.rb
-          # Replace SHA placeholders
-          MAC_ARM=$(grep aarch64-apple-darwin ../../dist/SHA256SUMS.txt | awk '{print $1}')
-          MAC_X64=$(grep x86_64-apple-darwin ../../dist/SHA256SUMS.txt | awk '{print $1}')
-          LNX_ARM=$(grep aarch64-unknown-linux-musl ../../dist/SHA256SUMS.txt | awk '{print $1}')
-          LNX_X64=$(grep x86_64-unknown-linux-musl ../../dist/SHA256SUMS.txt | awk '{print $1}')
+          # Replace SHA placeholders (match exact asset names)
+          MAC_ARM=$(grep aarch64-apple-darwin.tar.gz ../../dist/SHA256SUMS.txt | awk '{print $1}')
+          MAC_X64=$(grep x86_64-apple-darwin.tar.gz ../../dist/SHA256SUMS.txt | awk '{print $1}')
+          LNX_ARM=$(grep aarch64-unknown-linux-gnu.tar.gz ../../dist/SHA256SUMS.txt | awk '{print $1}')
+          LNX_X64=$(grep x86_64-unknown-linux-musl.tar.gz ../../dist/SHA256SUMS.txt | awk '{print $1}')
           sed -i "s/__SHA256_MAC_ARM64__/${MAC_ARM}/" rectiq.rb
           sed -i "s/__SHA256_MAC_X64__/${MAC_X64}/" rectiq.rb
           sed -i "s/__SHA256_LINUX_ARM64__/${LNX_ARM}/" rectiq.rb
