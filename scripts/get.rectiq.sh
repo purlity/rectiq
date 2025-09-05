@@ -88,3 +88,15 @@ install -m 0755 "$SRC" "$INSTALL_DIR/$BIN_NAME"
 echo "Installed to $INSTALL_DIR/$BIN_NAME"
 "$INSTALL_DIR/$BIN_NAME" --version || true
 
+# Initialize default config if missing (zero-touch)
+CFG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/rectiq"
+CFG="$CFG_DIR/config.toml"
+if [ ! -f "$CFG" ]; then
+  mkdir -p "$CFG_DIR"
+  : "${RECTIQ_API_BASE:=}"
+  {
+    printf '%s\n' "api_base = \"${RECTIQ_API_BASE:-https://api.rectiq.com}\""
+    printf '%s\n' "profile  = \"default\""
+  } >"$CFG"
+  echo "Wrote default config to $CFG" >&2
+fi
