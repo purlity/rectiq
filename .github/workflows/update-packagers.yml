@@ -2,15 +2,25 @@ name: Update Homebrew & Scoop
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g., rectiq-cli-v0.1.0)"
+        required: true
+        type: string
 jobs:
   update:
-    if: ${{ github.event.release.prerelease == false }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && github.event.release.prerelease == false) }}
     runs-on: ubuntu-latest
     steps:
       - name: Resolve version
         id: v
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           V="${TAG#rectiq-cli-v}"
           echo "version=$V" >> $GITHUB_OUTPUT
@@ -46,6 +56,7 @@ jobs:
         run: |
           V="${{ steps.v.outputs.version }}"
           git clone https://github.com/purlity/homebrew-tap tap
+          git -C tap remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/purlity/homebrew-tap"
           cd tap/Formula
           # Replace version
           sed -i "s/version \".*\"/version \"${V}\"/" rectiq.rb
@@ -69,6 +80,7 @@ jobs:
           V="${{ steps.v.outputs.version }}"
           cd "$GITHUB_WORKSPACE"
           git clone https://github.com/purlity/scoop-bucket bucket
+          git -C bucket remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/purlity/scoop-bucket"
           cd bucket
           sed -i "s/\"version\": \".*\"/\"version\": \"${V}\"/" rectiq.json
           WIN_X64=$(grep x86_64-pc-windows-msvc.zip ../dist/SHA256SUMS.txt | awk '{print $1}')
