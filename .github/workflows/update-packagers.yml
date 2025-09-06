@@ -53,7 +53,8 @@ jobs:
           done
           cat dist/SHA256SUMS.txt
       - name: Update Homebrew tap
-        env: { GH_TOKEN: ${{ secrets.GH_PAT_PUSH }} }
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT_PUSH }}
         run: |
           V="${{ steps.v.outputs.version }}"
           git clone https://github.com/purlity/homebrew-tap tap
@@ -76,7 +77,8 @@ jobs:
           git push
 
       - name: Update Scoop bucket
-        env: { GH_TOKEN: ${{ secrets.GH_PAT_PUSH }} }
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT_PUSH }}
         run: |
           V="${{ steps.v.outputs.version }}"
           cd "$GITHUB_WORKSPACE"
