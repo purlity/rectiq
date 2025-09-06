@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-# Simple installer for Rectiq CLI from GitHub Releases
+# Rectiq CLI installer with signed checksum verification (minisign)
 # Usage: curl -fsSL https://get.rectiq.sh | sh
 
 OWNER=${OWNER:-purlity}
@@ -30,19 +30,28 @@ need curl
 OS=$(uname -s)
 ARCH=$(uname -m)
 
+# Map to build targets and archive ext
 case "$OS" in
-  Linux) OS_TAG=unknown-linux-musl ; EXT=tar.xz ;;
-  Darwin) OS_TAG=apple-darwin ; EXT=tar.xz ;;
+  Linux)
+    case "$ARCH" in
+      x86_64|amd64) TARGET="x86_64-unknown-linux-musl" ;;
+      aarch64|arm64) TARGET="aarch64-unknown-linux-gnu" ;;
+      *) echo "error: unsupported ARCH for Linux: $ARCH" >&2; exit 1 ;;
+    esac
+    EXT=tar.gz
+    ;;
+  Darwin)
+    case "$ARCH" in
+      x86_64|amd64) TARGET="x86_64-apple-darwin" ;;
+      aarch64|arm64) TARGET="aarch64-apple-darwin" ;;
+      *) echo "error: unsupported ARCH for macOS: $ARCH" >&2; exit 1 ;;
+    esac
+    EXT=tar.gz
+    ;;
   *) echo "error: unsupported OS: $OS" >&2; exit 1 ;;
 esac
 
-case "$ARCH" in
-  x86_64|amd64) ARCH_TAG=x86_64 ;;
-  aarch64|arm64) ARCH_TAG=aarch64 ;;
-  *) echo "error: unsupported ARCH: $ARCH" >&2; exit 1 ;;
-esac
-
-# Determine version
+# Determine version tag
 if [ -n "${VERSION:-}" ]; then
   TAG="rectiq-cli-v${VERSION}"
 else
@@ -53,27 +62,68 @@ else
     exit 1
   fi
 fi
+VER=${TAG#rectiq-cli-v}
 
-ASSET="${TAG}-${ARCH_TAG}-${OS_TAG}.${EXT}"
-URL="https://github.com/${OWNER}/${REPO}/releases/download/${TAG}/${ASSET}"
+ARCHIVE="rectiq-cli-${VER}-${TARGET}.${EXT}"
+BASE="https://github.com/${OWNER}/${REPO}/releases/download/${TAG}"
+ARCHIVE_URL="${BASE}/${ARCHIVE}"
+SUMS_URL="${BASE}/SHA256SUMS.txt"
+SIG_URL="${SUMS_URL}.minisig"
 
 TMPDIR=${TMPDIR:-/tmp}
 WORKDIR="$(mktemp -d "${TMPDIR}/rectiq.XXXXXX")"
 trap 'rm -rf "$WORKDIR"' EXIT INT TERM
 
-echo "Downloading $URL" >&2
-curl -fL "$URL" -o "$WORKDIR/artifact.$EXT"
+# Download and verify SHA256SUMS.txt (unless bypassed)
+if [ -z "${RECTIQ_INSECURE_SKIP_VERIFY:-}" ]; then
+  if ! command -v minisign >/dev/null 2>&1; then
+    echo "minisign is required to verify; set RECTIQ_INSECURE_SKIP_VERIFY=1 to bypass (not recommended)." >&2
+    echo "macOS: brew install minisign | Debian/Ubuntu: sudo apt-get install -y minisign" >&2
+    exit 1
+  fi
+  PUBKEY_FILE="$WORKDIR/rectiq-minisign.pub"
+  if [ -n "${RECTIQ_MINISIGN_PUBKEY:-}" ]; then
+    printf '%s\n' "$RECTIQ_MINISIGN_PUBKEY" > "$PUBKEY_FILE"
+  else
+    PUBKEY_URL=${RECTIQ_MINISIGN_PUBKEY_URL:-https://raw.githubusercontent.com/purlity/rectiq/main/SECURITY/rectiq-minisign.pub}
+    echo "Fetching minisign public key from $PUBKEY_URL" >&2
+    curl -fsSL "$PUBKEY_URL" -o "$PUBKEY_FILE"
+  fi
+  echo "Downloading $SUMS_URL and signature" >&2
+  curl -fsSL "$SUMS_URL" -o "$WORKDIR/SHA256SUMS.txt"
+  curl -fsSL "$SIG_URL"  -o "$WORKDIR/SHA256SUMS.txt.minisig"
+  echo "Verifying signature..." >&2
+  minisign -Vm "$WORKDIR/SHA256SUMS.txt" -P "$PUBKEY_FILE"
+else
+  echo "WARNING: RECTIQ_INSECURE_SKIP_VERIFY set; skipping signature verification" >&2
+  curl -fsSL "$SUMS_URL" -o "$WORKDIR/SHA256SUMS.txt"
+fi
 
-case "$EXT" in
-  tar.xz)
-    need tar
-    tar -xJf "$WORKDIR/artifact.$EXT" -C "$WORKDIR"
-    ;;
-  zip)
-    need unzip
-    unzip -q "$WORKDIR/artifact.$EXT" -d "$WORKDIR"
-    ;;
-esac
+echo "Downloading $ARCHIVE_URL" >&2
+curl -fL "$ARCHIVE_URL" -o "$WORKDIR/artifact.$EXT"
+
+# Verify archive checksum against verified list
+EXPECTED=$(awk -v f="$ARCHIVE" '$2==f {print $1}' "$WORKDIR/SHA256SUMS.txt" || true)
+if [ -z "$EXPECTED" ]; then
+  echo "error: could not find checksum for $ARCHIVE in SHA256SUMS.txt" >&2
+  exit 1
+fi
+if [ "$OS" = "Darwin" ]; then
+  ACTUAL=$(shasum -a 256 "$WORKDIR/artifact.$EXT" | awk '{print $1}')
+else
+  need sha256sum
+  ACTUAL=$(sha256sum "$WORKDIR/artifact.$EXT" | awk '{print $1}')
+fi
+if [ "$EXPECTED" != "$ACTUAL" ]; then
+  echo "error: checksum mismatch for $ARCHIVE" >&2
+  echo "expected: $EXPECTED" >&2
+  echo "actual:   $ACTUAL" >&2
+  exit 1
+fi
+
+# Extract
+need tar
+tar -xzf "$WORKDIR/artifact.$EXT" -C "$WORKDIR"
 
 if [ -x "$WORKDIR/$BIN_NAME" ]; then
   SRC="$WORKDIR/$BIN_NAME"
@@ -100,3 +150,4 @@ if [ ! -f "$CFG" ]; then
   } >"$CFG"
   echo "Wrote default config to $CFG" >&2
 fi
+
