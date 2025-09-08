@@ -3,12 +3,26 @@ name: winget (submit to winget-pkgs)
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g., rectiq-cli-v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   submit:
     name: WinGet Submit
     # Ensure this only runs in the public repo context
-    if: ${{ github.repository == 'purlity/rectiq' && github.event.release.prerelease == false }}
+    if: ${{ github.repository == 'purlity/rectiq' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && github.event.release.prerelease == false)) }}
     runs-on: windows-latest
     env:
       WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
@@ -27,15 +41,20 @@ jobs:
       - name: Prepare manifest
         shell: pwsh
         run: |
-          $v = "${{ github.event.release.tag_name }}".Replace("rectiq-cli-v", "")
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            $tag = "${{ github.event.inputs.tag }}"
+          } else {
+            $tag = "${{ github.event.release.tag_name }}"
+          }
+          $v = $tag.Replace("rectiq-cli-v", "")
           ./wingetcreate.exe new `
             --publisher "Purlity" --publisherUrl "https://rectiq.com" `
             --shortdescription "Rectiq CLI" `
             --package "Rectiq.Rectiq" `
             --version $v `
             --installers `
-              "https://github.com/purlity/rectiq/releases/download/${{ github.event.release.tag_name }}/rectiq-cli-$v-x86_64-pc-windows-msvc.zip" `
-              "https://github.com/purlity/rectiq/releases/download/${{ github.event.release.tag_name }}/rectiq-cli-$v-aarch64-pc-windows-msvc.zip" `
+              "https://github.com/purlity/rectiq/releases/download/$tag/rectiq-cli-$v-x86_64-pc-windows-msvc.zip" `
+              "https://github.com/purlity/rectiq/releases/download/$tag/rectiq-cli-$v-aarch64-pc-windows-msvc.zip" `
             --output winget
 
       - name: Submit PR to winget-pkgs

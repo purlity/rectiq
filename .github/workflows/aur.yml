@@ -3,12 +3,25 @@ name: aur (rectiq-bin)
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g., rectiq-cli-v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   aur:
     name: AUR Publish
     # Only run in the public repo, and only for final releases
-    if: ${{ github.repository == 'purlity/rectiq' && github.event.release.prerelease == false }}
+    if: ${{ github.repository == 'purlity/rectiq' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'release' && github.event.release.prerelease == false)) }}
     runs-on: ubuntu-latest
     env:
       AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
@@ -26,7 +39,11 @@ jobs:
         if: ${{ env.AUR_SSH_PRIVATE_KEY != '' }}
         run: |
           set -euxo pipefail
-          TAG="${{ github.event.release.tag_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${{ github.event.release.tag_name }}"
+          fi
           VER="${TAG#rectiq-cli-v}"
           sed -i "s/\${VERSION_FROM_TAG}/${VER}/g" aur/PKGBUILD
 
