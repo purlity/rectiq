@@ -28,7 +28,9 @@ jobs:
             --target aarch64-pc-windows-msvc \
             --target x86_64-pc-windows-msvc
       - name: Upload release assets
-        uses: taiki-e/upload-release-action@v1
+        uses: svenstaro/upload-release-action@v2
         with:
-          asset_pattern: 'target/dist/*'
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
+          file: target/dist/*
+          file_glob: true
