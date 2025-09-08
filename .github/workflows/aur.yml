@@ -6,6 +6,7 @@ on:
 
 jobs:
   aur:
+    name: AUR Publish
     # Only run in the public repo, and only for final releases
     if: ${{ github.repository == 'purlity/rectiq' && github.event.release.prerelease == false }}
     runs-on: ubuntu-latest

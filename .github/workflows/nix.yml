@@ -6,6 +6,7 @@ on:
 
 jobs:
   nix-build:
+    name: Nix Build
     # Only run in the public repo, and only for final releases
     if: ${{ github.repository == 'purlity/rectiq' && github.event.release.prerelease == false }}
     runs-on: ubuntu-latest
@@ -29,4 +30,3 @@ jobs:
 
       - name: Build (Linux)
         run: nix build .#rectiq
-

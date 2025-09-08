@@ -5,6 +5,7 @@ on:
 
 jobs:
   build:
+    name: Build CLI (manual)
     if: false # disabled; builds happen in private CI
     runs-on: ubuntu-latest
     permissions:

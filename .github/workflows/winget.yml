@@ -6,6 +6,7 @@ on:
 
 jobs:
   submit:
+    name: WinGet Submit
     # Ensure this only runs in the public repo context
     if: ${{ github.repository == 'purlity/rectiq' && github.event.release.prerelease == false }}
     runs-on: windows-latest
