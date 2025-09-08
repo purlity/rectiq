@@ -1,0 +1,32 @@
+name: nix flake build
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  nix-build:
+    # Only run in the public repo, and only for final releases
+    if: ${{ github.repository == 'purlity/rectiq' && github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+
+      - name: Pin flake version and sha256 (Linux)
+        shell: bash
+        run: |
+          set -euxo pipefail
+          TAG="${{ github.event.release.tag_name }}"
+          VER="${TAG#rectiq-cli-v}"
+          sed -i "s/version = \"0.1.0\"/version = \"${VER}\"/" flake.nix
+          # Compute sha256 (Nix base32) for the Linux x86_64 tarball
+          URL="https://github.com/purlity/rectiq/releases/download/rectiq-cli-v${VER}/rectiq-cli-${VER}-x86_64-unknown-linux-musl.tar.gz"
+          HASH=$(nix-prefetch-url --type sha256 "$URL")
+          sed -i "s#sha256 = \"[^"]*\"; # replaced in CI#sha256 = \"${HASH}\"; # pinned by CI#" flake.nix
+
+      - name: Build (Linux)
+        run: nix build .#rectiq
+

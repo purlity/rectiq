@@ -1,0 +1,38 @@
+name: winget (submit to winget-pkgs)
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  submit:
+    # Ensure this only runs in the public repo context
+    if: ${{ github.repository == 'purlity/rectiq' && github.event.release.prerelease == false }}
+    runs-on: windows-latest
+    steps:
+      - name: Install wingetcreate
+        shell: pwsh
+        run: |
+          iwr https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+
+      - name: Prepare manifest
+        shell: pwsh
+        run: |
+          $v = "${{ github.event.release.tag_name }}".Replace("rectiq-cli-v", "")
+          ./wingetcreate.exe new `
+            --publisher "Purlity" --publisherUrl "https://rectiq.com" `
+            --shortdescription "Rectiq CLI" `
+            --package "Rectiq.Rectiq" `
+            --version $v `
+            --installers `
+              "https://github.com/purlity/rectiq/releases/download/${{ github.event.release.tag_name }}/rectiq-cli-$v-x86_64-pc-windows-msvc.zip" `
+              "https://github.com/purlity/rectiq/releases/download/${{ github.event.release.tag_name }}/rectiq-cli-$v-aarch64-pc-windows-msvc.zip" `
+            --output winget
+
+      - name: Submit PR to winget-pkgs
+        env:
+          GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        shell: pwsh
+        run: |
+          ./wingetcreate.exe submit --token $env:GITHUB_TOKEN --pr winget\*.yaml
+

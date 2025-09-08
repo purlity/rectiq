@@ -1,0 +1,25 @@
+pkgname=rectiq-bin
+pkgver=${VERSION_FROM_TAG}
+pkgrel=1
+pkgdesc="Rectiq CLI (prebuilt)"
+arch=('x86_64' 'aarch64')
+url="https://rectiq.com"
+license=('custom')
+provides=('rectiq')
+depends=()
+
+# Arch-specific sources (downloaded from the public GitHub releases)
+source_x86_64=("rectiq-cli-${pkgver}-x86_64-unknown-linux-musl.tar.gz::https://github.com/purlity/rectiq/releases/download/rectiq-cli-v${pkgver}/rectiq-cli-${pkgver}-x86_64-unknown-linux-musl.tar.gz")
+source_aarch64=("rectiq-cli-${pkgver}-aarch64-unknown-linux-gnu.tar.gz::https://github.com/purlity/rectiq/releases/download/rectiq-cli-v${pkgver}/rectiq-cli-${pkgver}-aarch64-unknown-linux-gnu.tar.gz")
+
+# Skip checksums for binary upstream artifacts managed in GitHub Releases
+sha256sums_x86_64=('SKIP')
+sha256sums_aarch64=('SKIP')
+
+package() {
+  # After extraction, the binary should be in $srcdir
+  install -Dm755 rectiq -t "$pkgdir/usr/bin"
+  # License may not be shipped in the archive; best-effort install
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/rectiq-bin/LICENSE" 2>/dev/null || true
+}
+

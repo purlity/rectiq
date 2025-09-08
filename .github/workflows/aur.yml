@@ -1,0 +1,40 @@
+name: aur (rectiq-bin)
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  aur:
+    # Only run in the public repo, and only for final releases
+    if: ${{ github.repository == 'purlity/rectiq' && github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare AUR repo and push PKGBUILD
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          AUR_KNOWN_HOSTS: ${{ secrets.AUR_KNOWN_HOSTS }}
+          AUR_REPO_URL: ${{ secrets.AUR_REPO_URL }}
+          AUR_EMAIL: ${{ secrets.AUR_EMAIL }}
+        run: |
+          set -euxo pipefail
+          TAG="${{ github.event.release.tag_name }}"
+          VER="${TAG#rectiq-cli-v}"
+          sed -i "s/\${VERSION_FROM_TAG}/${VER}/g" aur/PKGBUILD
+
+          mkdir -p ~/.ssh
+          printf %s "${AUR_SSH_PRIVATE_KEY}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf %s "${AUR_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+
+          git clone "${AUR_REPO_URL}" aur-out
+          cp aur/PKGBUILD aur-out/
+          cd aur-out
+          git config user.name "rectiq-bot"
+          git config user.email "${AUR_EMAIL}"
+          git add PKGBUILD
+          git commit -m "rectiq-bin ${VER}" || echo "No changes to commit"
+          git push
+
